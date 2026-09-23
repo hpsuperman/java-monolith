@@ -1,0 +1,117 @@
+server:
+  port: 7070
+  shutdown: graceful
+  tomcat:
+    threads:
+      max: 200
+      min-spare: 20
+    max-connections: 8192
+    accept-count: 200
+
+spring:
+  application:
+    name: java-monolith
+  profiles:
+    active: dev
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+    # 不序列化 null 字段，减小响应体
+    default-property-inclusion: non_null
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
+
+  # ==================== 数据库版本管理 ====================
+  # 表结构由 db/migration 下的脚本定义，应用启动时自动执行。
+  # 加一张表 = 新建 V3__xxx.sql → 重启应用，不需要手工跑任何 SQL。
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    # 存量库（有表但没有 flyway_schema_history）自动打基线，保住已有数据；保持默认 true。
+    #
+    # ⚠️ 代价：Flyway 官方文档说这会 "removes the safety net"。正常情况下连到一个
+    #    非空且无历史表的库会直接报错——那正是防「datasource.url 写错、连到别人的库」
+    #    的最后一道防线。打开它之后，连错库会静默打上基线然后开始跑迁移。
+    #    所以改 url 里的库名时，务必人工确认一次。
+    baseline-on-migrate: true
+    # 与 V1__init_user.sql 对齐。存量库的现状恰好等于「V1 已执行」，所以基线打到 1，
+    # 只跑 V2 及以后——V1 带 CREATE TABLE，在存量库上重跑必失败。
+    # 默认值本来就是 1，这里显式写出来，是因为「V1 不执行」是整个方案的关键，
+    # 藏在默认值里读配置的人看不见。注意别写成 1.0：那是另一个版本号。
+    baseline-version: 1
+    # 生产红线：flyway clean 会 DROP 掉整个 schema。
+    # 11.x 的默认值已经是 true，这里显式写出来，免得哪天有人靠改配置把它打开。
+    clean-disabled: true
+
+# ==================== MyBatis-Plus ====================
+mybatis-plus:
+  # XML 映射文件位置（与 mapper 接口同名的 XML 放这里）
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.hpsuperman.monolith.modules.**.entity
+  global-config:
+    banner: false
+    db-config:
+      # 分布式 ID（雪花算法），也可换 auto 用数据库自增
+      id-type: assign_id
+      # 逻辑删除：全局配置后，实体上标注 @TableLogic 即可
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+      # 更新时忽略 null 字段
+      update-strategy: not_null
+  configuration:
+    map-underscore-to-camel-case: true
+    cache-enabled: false
+    call-setters-on-nulls: true
+
+# ==================== 接口文档 ====================
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  default-produces-media-type: application/json
+
+# ==================== 监控端点 ====================
+# 只暴露必要端点，生产环境别开 *
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when_authorized
+  health:
+    redis:
+      enabled: true
+
+# ==================== 业务自定义配置 ====================
+app:
+  jwt:
+    # 生产环境务必用环境变量覆盖，且长度 >= 32 字节（HS256 要求 256 位密钥）
+    secret: ${JWT_SECRET:dev-only-secret-key-change-me-in-production-0123456789abcdef}
+    access-token-ttl: 30m
+    refresh-token-ttl: 7d
+    issuer: java-monolith
+  cors:
+    allowed-origins: "*"
+    allowed-methods: "*"
+    allow-credentials: false
+  mq:
+    # 本地没起 RocketMQ 时改成 false，消费者会整体不注册
+    enabled: true
+  init-admin:
+    # 首次启动自动创建 admin 账号（仅当该账号不存在时）
+    enabled: true
+
+logging:
+  level:
+    root: info
+    com.hpsuperman.monolith: info

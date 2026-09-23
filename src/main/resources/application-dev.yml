@@ -1,0 +1,56 @@
+spring:
+  # ==================== MySQL ====================
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/monolith?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:root}
+    hikari:
+      pool-name: MonolithHikariPool
+      minimum-idle: 5
+      maximum-pool-size: 20
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      connection-test-query: SELECT 1
+
+  # ==================== Redis ====================
+  # 注意：Spring Boot 3 是 spring.data.redis，不是 SB2 的 spring.redis
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      database: 0
+      password: ${REDIS_PASSWORD:}
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 2
+          max-wait: 3000ms
+
+# ==================== RocketMQ ====================
+# 本地没起 broker 时，把整块注释掉，并把 app.mq.enabled 设为 false
+rocketmq:
+  name-server: ${ROCKETMQ_NAME_SERVER:127.0.0.1:9876}
+  producer:
+    group: monolith-producer
+    send-message-timeout: 3000
+    retry-times-when-send-failed: 2
+
+# ==================== 开发期覆盖 ====================
+mybatis-plus:
+  configuration:
+    # 开发期打印 SQL，生产环境务必删掉这一行
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+logging:
+  level:
+    com.hpsuperman.monolith: debug
+    org.springframework.security: info
+    org.apache.rocketmq: warn
+
+springdoc:
+  swagger-ui:
+    enabled: true

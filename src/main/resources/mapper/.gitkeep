@@ -1,0 +1,4 @@
+# 这个目录用于存放 MyBatis XML 映射文件。
+# 对应配置：mybatis-plus.mapper-locations: classpath*:/mapper/**/*.xml
+# 用 MyBatis-Plus 的 BaseMapper + 条件构造器时通常不需要 XML，
+# 复杂 SQL（多表 join、报表）再写在这里。

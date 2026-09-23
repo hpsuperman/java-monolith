@@ -1,0 +1,43 @@
+package com.hpsuperman.monolith.common.enums;
+
+import com.baomidou.mybatisplus.annotation.EnumValue;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+
+import java.util.Arrays;
+
+public enum EnabledStatus {
+    DISABLED(0, "停用"),
+
+    ENABLED(1, "启用");
+
+    @EnumValue
+    @JsonValue
+    private final int value;
+
+    private final String label;
+
+    EnabledStatus(int value, String label) {
+        this.value = value;
+        this.label = label;
+    }
+
+    public int value() {
+        return value;
+    }
+
+    public String label() {
+        return label;
+    }
+
+    @JsonCreator
+    public static EnabledStatus of(Integer value) {
+        if (value == null) {
+            return null;
+        }
+        return Arrays.stream(values())
+            .filter(status -> status.value == value)
+            .findFirst()
+            .orElseThrow(() -> new IllegalArgumentException("未知的状态值：" + value + "，只能是 0 或 1"));
+    }
+}

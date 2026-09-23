@@ -1,0 +1,54 @@
+# 生产环境配置骨架。
+# 敏感信息一律走环境变量，不要硬编码在文件里。
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT:3306}/${MYSQL_DATABASE}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=true&rewriteBatchedStatements=true
+    username: ${MYSQL_USER}
+    password: ${MYSQL_PASSWORD}
+    hikari:
+      pool-name: MonolithHikariPool
+      minimum-idle: 10
+      maximum-pool-size: 50
+      connection-timeout: 3000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD}
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 32
+          max-idle: 16
+          min-idle: 8
+
+rocketmq:
+  name-server: ${ROCKETMQ_NAME_SERVER}
+  producer:
+    group: monolith-producer
+    send-message-timeout: 3000
+
+# 生产环境关闭接口文档，避免暴露内部接口清单
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+app:
+  cors:
+    # 生产环境务必改成具体域名，不要用 *
+    allowed-origins: ${CORS_ALLOWED_ORIGINS}
+    allow-credentials: true
+  # 生产环境不要自动建 admin 账号
+  init-admin:
+    enabled: false
+
+logging:
+  level:
+    root: warn
+    com.hpsuperman.monolith: info

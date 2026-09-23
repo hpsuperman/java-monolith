@@ -1,0 +1,25 @@
+# 换行符统一策略。
+#
+# 与另外两处保持一致，三者缺一就会出现「本地跑得好好的、CI 上 diff 爆炸」：
+#   .editorconfig      -> end_of_line = lf
+#   pom.xml            -> spotless lineEndings = UNIX
+#   本文件              -> eol=lf
+#
+# 仓库内一律 LF，检出时不做平台转换。Windows 上编辑 Java 也不会污染。
+* text=auto eol=lf
+
+# Windows 批处理例外：cmd.exe 对 LF 支持不可靠，必须 CRLF。
+# 另注意 .bat 必须保持纯 ASCII（原因见 README「不用 Docker 时跑 RocketMQ」）。
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# 二进制文件不做任何转换
+*.jar   binary
+*.zip   binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.woff  binary
+*.woff2 binary

@@ -1,0 +1,24 @@
+# 编辑器统一配置。IDEA / VS Code / Eclipse 均原生支持，无需装插件。
+# 只约束「格式」，具体写法由 Spotless 在构建期兜底（见 pom.xml）。
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# 配置文件的缩进惯例是 2 空格，Java 是 4 空格，不要一刀切
+[*.{yml,yaml,json,xml}]
+indent_size = 2
+
+# Markdown 里行尾两个空格是「硬换行」，删掉会改变渲染结果
+[*.md]
+trim_trailing_whitespace = false
+
+# Windows 批处理：cmd.exe 对 LF 的支持不可靠，且按 ANSI 码页解析
+# （详见 README「不用 Docker 时跑 RocketMQ」一节，.bat 必须保持纯 ASCII）
+[*.{bat,cmd}]
+end_of_line = crlf

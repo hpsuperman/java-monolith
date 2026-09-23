@@ -1,0 +1,36 @@
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+
+### Eclipse ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### VS Code ###
+.vscode/
+
+### 日志与运行时产物 ###
+logs/
+*.log
+*.log.gz
+
+### 本地覆盖配置（不要提交真实密码） ###
+src/main/resources/application-local.yml
+
+### IDEA 运行配置 ###
+# .run/ 是 IDEA 的「共享运行配置」目录，本意就是提交进仓库给团队共用。
+# 但本项目的 MonolithApplication.run.xml 里带着本机 MySQL / Redis 明文密码，
+# 因此整个目录忽略掉。将来真要共用时，把值改成占位符再由各人自行注入。
+.run/

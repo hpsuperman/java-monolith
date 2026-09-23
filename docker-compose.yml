@@ -1,0 +1,101 @@
+# 本地开发用基础设施：MySQL + Redis + RocketMQ
+# 启动：docker compose up -d
+# 查看状态：docker compose ps
+# 停止并清空数据：docker compose down -v
+#
+# 只想起一部分（比如本地已有 MySQL）：
+#   docker compose up -d redis rocketmq-namesrv rocketmq-broker
+
+services:
+
+  mysql:
+    image: mysql:8.0
+    container_name: monolith-mysql
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_general_ci
+      - --default-time-zone=+08:00
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: monolith
+      TZ: Asia/Shanghai
+    ports:
+      - "3306:3306"
+    volumes:
+      - monolith-mysql-data:/var/lib/mysql
+      # 这里以前挂的是 db/schema.sql，现在建表已经交给应用侧的 Flyway 了
+      # （见 src/main/resources/db/migration），不再需要 initdb.d 挂载。
+      # MYSQL_DATABASE 保留着：Flyway 只能往已存在的库里迁移，建库这一步还得靠它。
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - monolith
+
+  redis:
+    image: redis:7-alpine
+    container_name: monolith-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - monolith-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - monolith
+
+  rocketmq-namesrv:
+    image: apache/rocketmq:5.3.1
+    container_name: monolith-rocketmq-namesrv
+    restart: unless-stopped
+    command: sh mqnamesrv
+    environment:
+      JAVA_OPT_EXT: "-Xms256m -Xmx256m -Xmn128m"
+    ports:
+      - "9876:9876"
+    volumes:
+      - monolith-rocketmq-namesrv-logs:/home/rocketmq/logs
+    networks:
+      - monolith
+
+  rocketmq-broker:
+    image: apache/rocketmq:5.3.1
+    container_name: monolith-rocketmq-broker
+    restart: unless-stopped
+    depends_on:
+      - rocketmq-namesrv
+    # -c 指定配置文件，里面的 brokerIP1 是关键，见 docker/rocketmq/broker.conf
+    command: sh mqbroker -n rocketmq-namesrv:9876 -c /home/rocketmq/conf/broker.conf
+    environment:
+      NAMESRV_ADDR: "rocketmq-namesrv:9876"
+      JAVA_OPT_EXT: "-Xms512m -Xmx512m -Xmn256m"
+    ports:
+      - "10909:10909"
+      - "10911:10911"
+      - "10912:10912"
+    volumes:
+      - ./docker/rocketmq/broker.conf:/home/rocketmq/conf/broker.conf:ro
+      - monolith-rocketmq-broker-logs:/home/rocketmq/logs
+      - monolith-rocketmq-broker-store:/home/rocketmq/store
+    networks:
+      - monolith
+
+volumes:
+  monolith-mysql-data:
+  monolith-redis-data:
+  monolith-rocketmq-namesrv-logs:
+  monolith-rocketmq-broker-logs:
+  monolith-rocketmq-broker-store:
+
+networks:
+  monolith:
+    driver: bridge
