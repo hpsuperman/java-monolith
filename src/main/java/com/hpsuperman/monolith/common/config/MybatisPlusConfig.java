@@ -3,7 +3,6 @@ package com.hpsuperman.monolith.common.config;
 import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.BlockAttackInnerInterceptor;
-import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.hpsuperman.monolith.common.dto.PageQuery;
 import org.mybatis.spring.annotation.MapperScan;
@@ -23,8 +22,6 @@ public class MybatisPlusConfig {
 
         pagination.setOverflow(false);
         interceptor.addInnerInterceptor(pagination);
-
-        interceptor.addInnerInterceptor(new OptimisticLockerInnerInterceptor());
 
         interceptor.addInnerInterceptor(new BlockAttackInnerInterceptor());
 

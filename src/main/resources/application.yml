@@ -63,10 +63,6 @@ mybatis-plus:
     db-config:
       # 分布式 ID（雪花算法），也可换 auto 用数据库自增
       id-type: assign_id
-      # 逻辑删除：全局配置后，实体上标注 @TableLogic 即可
-      logic-delete-field: deleted
-      logic-delete-value: 1
-      logic-not-delete-value: 0
       # 更新时忽略 null 字段
       update-strategy: not_null
   configuration:

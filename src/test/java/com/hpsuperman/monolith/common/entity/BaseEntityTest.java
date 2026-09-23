@@ -3,9 +3,7 @@ package com.hpsuperman.monolith.common.entity;
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.baomidou.mybatisplus.annotation.Version;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
@@ -53,27 +51,22 @@ class BaseEntityTest {
     @DisplayName("上移到 BaseEntity 的注解仍然跟在字段上——丢了的话映射会静默失效")
     void inheritedFieldsKeepTheirMapperAnnotations() throws Exception {
         assertThat(findField(Fixture.class, "id").getAnnotation(TableId.class)).isNotNull();
-        assertThat(findField(Fixture.class, "deleted").getAnnotation(TableLogic.class)).isNotNull();
-        assertThat(findField(Fixture.class, "version").getAnnotation(Version.class)).isNotNull();
 
         assertThat(fillOf(Fixture.class, "createTime")).isEqualTo(FieldFill.INSERT);
         assertThat(fillOf(Fixture.class, "updateTime")).isEqualTo(FieldFill.INSERT_UPDATE);
-        assertThat(fillOf(Fixture.class, "createBy")).isEqualTo(FieldFill.INSERT);
-        assertThat(fillOf(Fixture.class, "updateBy")).isEqualTo(FieldFill.INSERT_UPDATE);
     }
 
     @Test
     @DisplayName("公共字段确实声明在 BaseEntity 上，而不是又被抄回了子类")
     void commonFieldsLiveOnTheBaseClassOnly() throws Exception {
-        for (String name : new String[]{"id", "deleted", "version",
-                "createTime", "updateTime", "createBy", "updateBy"}) {
+        for (String name : new String[]{"id", "createTime", "updateTime"}) {
             assertThat(BaseEntity.class.getDeclaredField(name))
                     .as("%s 应声明在 BaseEntity 上", name)
                     .isNotNull();
         }
 
         assertThat(declaredFieldNames(Fixture.class)).doesNotContain(
-                "id", "deleted", "version", "createTime", "updateTime", "createBy", "updateBy");
+                "id", "createTime", "updateTime");
     }
 
     private static Field findField(Class<?> type, String name) throws NoSuchFieldException {

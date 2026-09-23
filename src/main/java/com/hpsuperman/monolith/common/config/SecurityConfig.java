@@ -29,21 +29,19 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig {
     private static final String[] PUBLIC_PATHS = {
-            "/api/auth/login",
-            "/api/auth/refresh",
-
-            "/api/auth/logout",
-            "/actuator/health/**",
-            "/actuator/info",
-
-            "/error",
+        "/api/auth/login",       // 登录 —— 还没登录的人当然要能调
+        "/api/auth/refresh",
+        "/api/auth/logout",
+        "/actuator/health/**",   // 健康检查，监控系统要能探
+        "/actuator/info",
+        "/error",
     };
 
     private static final String[] DOC_PATHS = {
-            "/swagger-ui.html",
-            "/swagger-ui/**",
-            "/v3/api-docs/**",
-            "/webjars/**",
+        "/swagger-ui.html",
+        "/swagger-ui/**",
+        "/v3/api-docs/**",
+        "/webjars/**",
     };
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -54,21 +52,21 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .formLogin(AbstractHttpConfigurer::disable)
-                .httpBasic(AbstractHttpConfigurer::disable)
-                .logout(AbstractHttpConfigurer::disable)
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(PUBLIC_PATHS).permitAll()
-                        .requestMatchers(DOC_PATHS).permitAll()
-                        .anyRequest().authenticated())
-                .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint(authenticationEntryPoint)
-                        .accessDeniedHandler(accessDeniedHandler))
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+            .csrf(AbstractHttpConfigurer::disable)
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .formLogin(AbstractHttpConfigurer::disable)
+            .httpBasic(AbstractHttpConfigurer::disable)
+            .logout(AbstractHttpConfigurer::disable)
+            .sessionManagement(session ->
+                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers(PUBLIC_PATHS).permitAll()
+                .requestMatchers(DOC_PATHS).permitAll()
+                .anyRequest().authenticated())
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint(authenticationEntryPoint)
+                .accessDeniedHandler(accessDeniedHandler))
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -80,7 +78,7 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration)
-            throws Exception {
+        throws Exception {
         return configuration.getAuthenticationManager();
     }
 
@@ -91,10 +89,10 @@ public class SecurityConfig {
 
         if (allowedOrigins.contains("*") && corsProperties.isAllowCredentials()) {
             throw new IllegalStateException(
-                    "CORS 配置冲突：app.cors.allowed-origins 含 \"*\" 且 app.cors.allow-credentials=true。"
-                            + "允许携带凭证时必须写具体域名（如 https://app.example.com），"
-                            + "否则任意站点都能携带凭证跨域调用本服务。"
-                            + "如果确实不需要凭证，请把 app.cors.allow-credentials 设为 false。");
+                "CORS 配置冲突：app.cors.allowed-origins 含 \"*\" 且 app.cors.allow-credentials=true。"
+                    + "允许携带凭证时必须写具体域名（如 https://app.example.com），"
+                    + "否则任意站点都能携带凭证跨域调用本服务。"
+                    + "如果确实不需要凭证，请把 app.cors.allow-credentials 设为 false。");
         }
 
         if (allowedOrigins.contains("*")) {
