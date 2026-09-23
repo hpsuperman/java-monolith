@@ -13,7 +13,6 @@ public enum ResultCode {
     NOT_FOUND(404, "请求的资源不存在"),
     METHOD_NOT_ALLOWED(405, "请求方法不支持"),
     PAYLOAD_TOO_LARGE(413, "请求体过大"),
-    TOO_MANY_REQUESTS(429, "请求过于频繁，请稍后重试"),
     INTERNAL_ERROR(500, "系统内部错误，请稍后重试"),
     SERVICE_UNAVAILABLE(503, "服务暂不可用"),
     BIZ_ERROR(500, "业务处理失败"),

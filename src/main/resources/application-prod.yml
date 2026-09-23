@@ -47,6 +47,17 @@ app:
   # 生产环境不要自动建 admin 账号
   init-admin:
     enabled: false
+  # 这里的占位符一律不写默认值，与 application.yml 的写法不同，是刻意的：
+  # 生产环境漏配就是配置错误，启动时直接抛 Could not resolve placeholder 停下来，
+  # 好过用本地默认值静默连到 127.0.0.1 上去。
+  minio:
+    endpoint: ${MINIO_ENDPOINT}
+    access-key: ${MINIO_ACCESS_KEY}
+    secret-key: ${MINIO_SECRET_KEY}
+    bucket: ${MINIO_BUCKET}
+    # 生产几乎一定要配：app 与 minio 通常不同机/不同网络，返回给浏览器的
+    # 地址多半要走 CDN 或反向代理，不能直接用 endpoint
+    public-url: ${MINIO_PUBLIC_URL}
 
 logging:
   level:

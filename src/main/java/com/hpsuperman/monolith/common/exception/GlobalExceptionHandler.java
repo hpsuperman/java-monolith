@@ -23,6 +23,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.LinkedHashMap;
@@ -130,6 +131,14 @@ public class GlobalExceptionHandler {
         log.warn("认证失败 | {} {} | {}", request.getMethod(), request.getRequestURI(), e.getMessage());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(Result.fail(ResultCode.UNAUTHORIZED));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<Result<Void>> handleMaxUploadSize(
+            MaxUploadSizeExceededException e, HttpServletRequest request) {
+        log.warn("上传文件超出容器上限 | {} {}", request.getMethod(), request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(Result.fail(ResultCode.PAYLOAD_TOO_LARGE));
     }
 
     @ExceptionHandler(DuplicateKeyException.class)

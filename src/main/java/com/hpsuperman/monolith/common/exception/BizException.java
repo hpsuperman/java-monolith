@@ -18,10 +18,6 @@ public class BizException extends RuntimeException {
         this(ResultCode.BIZ_ERROR, message, null);
     }
 
-    public BizException(String message, Throwable cause) {
-        this(ResultCode.BIZ_ERROR, message, cause);
-    }
-
     public BizException(ResultCode resultCode) {
         this(resultCode, resultCode.getMessage(), null);
     }
@@ -36,12 +32,6 @@ public class BizException extends RuntimeException {
         }
     }
 
-    public static void throwIf(boolean condition, ResultCode resultCode) {
-        if (condition) {
-            throw new BizException(resultCode);
-        }
-    }
-
     public static void throwIf(boolean condition, ResultCode resultCode, String message) {
         if (condition) {
             throw new BizException(resultCode, message);
@@ -51,13 +41,6 @@ public class BizException extends RuntimeException {
     public static <T> T requireNonNull(T target, String message) {
         if (target == null) {
             throw new BizException(message);
-        }
-        return target;
-    }
-
-    public static <T> T requireNonNull(T target, ResultCode resultCode) {
-        if (target == null) {
-            throw new BizException(resultCode);
         }
         return target;
     }

@@ -13,6 +13,7 @@ Java 单体服务脚手架。Spring Boot 3 + MyBatis-Plus + MySQL + Redis + Rock
 | Flyway | 11.7.2 | 建表与版本管理。版本由 `spring-boot-starter-parent` 管理，pom 里不写 `<version>`；MySQL 自 Flyway 10 起需额外引 `flyway-mysql` |
 | Redis | 7 | 用于刷新令牌与访问令牌黑名单 |
 | RocketMQ | 5.x | starter 版本 2.3.6 |
+| MinIO | 8.5.17 | 对象存储，`io.minio:minio` SDK。会拖进 okhttp / bcprov / snappy 等一串传递依赖 |
 | springdoc-openapi | 2.9.1 | **2.x 线对应 Spring Boot 3**，3.x 线是给 Spring Boot 4 的 |
 | jjwt | 0.13.0 | 使用 0.12+ 新 API |
 
@@ -22,7 +23,7 @@ Java 单体服务脚手架。Spring Boot 3 + MyBatis-Plus + MySQL + Redis + Rock
 ## 快速开始
 
 ```bash
-docker compose up -d          # mysql / redis / rocketmq
+docker compose up -d          # mysql / redis / rocketmq / minio（含建桶）
 mvn spring-boot:run
 ```
 
@@ -61,7 +62,7 @@ curl "http://localhost:7070/api/users?pageNum=1&pageSize=10" \
 ```
 src/main/java/com/hpsuperman/monolith/
 ├── common/      通用能力：config / entity / exception / handler / result / security / bootstrap
-└── modules/     业务模块：auth 登录 · user 用户 CRUD · material 物料 CRUD · demo MQ 示例
+└── modules/     业务模块：auth 登录 · user 用户 CRUD · material 物料 CRUD · file 文件上传 · demo MQ 示例
 
 src/main/resources/db/migration/   建表脚本，应用启动时由 Flyway 按序执行
 src/test/java/com/hpsuperman/monolith/   纯 Mockito 单测，不启 Spring、不需要中间件
@@ -90,6 +91,7 @@ src/test/java/com/hpsuperman/monolith/   纯 Mockito 单测，不启 Spring、�
 | 参数校验失败 | 400 | 400 |
 | 未认证 / 令牌过期 | 401 | 401 |
 | 无权限 | 403 | 403 |
+| 上传文件超过容器上限 | 413 | 413 |
 | 系统异常 | 500 | 500 |
 
 业务异常返回 HTTP 200，让前端能统一判 `success`；认证/权限类则必须让 HTTP 状态码准确，
@@ -106,6 +108,7 @@ src/test/java/com/hpsuperman/monolith/   纯 Mockito 单测，不启 Spring、�
 | `GET /api/auth/me` | 任意登录用户 |
 | `/api/users/**`（**含两个查询接口**） | `ADMIN` |
 | `/api/materials/**`（含写接口） | `USER` 或 `ADMIN` |
+| `POST /api/files/upload` | `USER` 或 `ADMIN` |
 | `/actuator/health` `/info`、接口文档 | 匿名（生产环境文档已关闭） |
 | 其余 | 登录即可 |
 
@@ -200,6 +203,56 @@ return PageResult.of(page, XxxConverter::toVO);
 
 > 只封装了**入参**。返回侧是 `PageResult`，与 `PageQuery` 无关。
 
+### 文件上传（MinIO）
+
+```bash
+curl -X POST http://localhost:7070/api/files/upload \
+  -H "Authorization: Bearer <accessToken>" \
+  -F "file=@logo.png"
+# → { "objectKey": "2026/09/23/1234.png", "url": "http://127.0.0.1:9000/monolith/2026/09/23/1234.png", ... }
+```
+
+返回的 `url` 直接存进业务表（`biz_material.image_url` 就是干这个的）。
+
+**两个已定的取舍**（改之前先想清楚，它们决定了整个接口形状）：
+
+1. **中转上传**：文件经应用转存 MinIO，不是前端直传。前端一个 multipart 请求就够，
+   校验和改名都在服务端一处。代价是文件吃应用的带宽和内存——20MB 上限内可接受。
+   要换直传（预签名 URL）是重写，不是改配置。
+2. **公开读**：bucket 策略允许匿名 `GetObject`，所以 URL 是永久、可存库、可进 CDN 的。
+   代价是**知道 URL 就能看**，且文件删了 URL 仍留在别人手里。要私有就得改成存
+   `objectKey`、每次查询再签发临时 URL——`MaterialVO.imageUrl` 会每次不同，列表接口也要跟着改。
+
+**服务端做三重校验，且不采信客户端**：
+
+| 校验 | 挡什么 |
+|---|---|
+| 扩展名白名单（`app.minio.allowed-extensions`） | 传 `.jsp` / `.sh` 上来 |
+| **文件头魔数**（jpg/png/gif/webp/bmp 各有签名） | 把脚本改名成 `.png` 伪装 |
+| 大小上限（`app.minio.max-file-size`） | 撑爆内存/磁盘 |
+
+`filename` 和 `Content-Type` 都由客户端伪造，所以**只用来取扩展名，绝不进存储路径**——
+objectKey 是 `yyyy/MM/dd/<雪花ID>.<扩展名>` 重新生成的，`../../etc/passwd.png` 这种名字
+只会让返回的 `originalName` 难看一点，碰不到路径。`Content-Type` 则由服务端按扩展名重新判定。
+
+> ⚠️ **白名单里没有已知签名的扩展名会跳过魔数校验**（只靠白名单挡）。以后往
+> `allowed-extensions` 里加 pdf/docx 时，记得同时往 `FileServiceImpl.SIGNATURES` 里补签名。
+
+**大小上限有两道闸门，但只有一个来源**：`spring.servlet.multipart.max-file-size` 写成
+`${app.minio.max-file-size}`，所以改 `app.minio.max-file-size` 一处两处都变。容器那道先触发
+（超了返回 **413**，由 `GlobalExceptionHandler` 处理），`FileServiceImpl` 再校验一次兜底。
+**别把它们改成不同的字面量**——容器总是先拦，业务校验就永远不执行了。
+
+**部署时最容易踩的一个坑**：`app.minio.endpoint` 和 `app.minio.public-url` 是两回事。
+前者是**应用连 MinIO**用的，后者是**拼进返回 URL**给浏览器用的。应用跑在容器里时
+`endpoint` 得写 `http://minio:9000`，但那个主机名浏览器解析不了——此时 `public-url`
+必须填成浏览器能访问的地址（`http://localhost:9000` 或 CDN 域名），否则上传成功但图片全裂。
+两者都填错才会出问题，默认配置（应用与 MinIO 同机）留空即可。
+
+**应用不依赖 MinIO 可用**：桶由 `docker-compose` 的 `minio-init` 一次性任务创建，
+不在应用启动时建。`MinioClient` 的构造也不做网络请求，所以 MinIO 挂了应用照常启动，
+只有上传接口报 503 语义的业务异常。
+
 ## 测试
 
 ```bash
@@ -224,6 +277,12 @@ mvn test
    `deleted = 0`，于是会在 INSERT 时撞唯一键，由全局异常处理转成 409
 7. **应用启动依赖数据库可达**：Flyway 迁移在启动阶段执行，库连不上或校验和不匹配都会让应用
    **直接启动失败**
+8. **上传的文件不会自动清理**：换掉物料图片或删掉物料，旧文件永远留在 MinIO 里。
+   当前没有引用计数也没有定时清理任务，桶只会越来越大。要清理得自己写——按
+   `objectKey` 前缀扫、比对业务表、删孤儿对象
+9. **上传没有做病毒扫描和图片二次编码**：魔数校验只能证明「这确实是张 PNG」，
+   证明不了「这张 PNG 是安全的」。图片处理库的解析漏洞（解压炸弹等）不在防线内。
+   对外网开放上传前，考虑过一遍 ClamAV 或交给专业图床
 
 ## 上线前检查清单
 
@@ -238,3 +297,7 @@ mvn test
       权限给少了应用起不来
 - [ ] 确认 `spring.flyway.clean-disabled` 仍为 `true`
 - [ ] 确认部署顺序是「先数据库、后应用」
+- [ ] MinIO 换掉 `minioadmin` 默认账号，桶策略改成只允许 `GetObject`（别给 `ListBucket`，
+      否则枚举桶就能拿到全部文件名）
+- [ ] 配好 `MINIO_PUBLIC_URL`（见上），并确认它指向的地址从**外网**能打开
+- [ ] 上传接口挂限流——它是最容易被刷的接口，一次请求就是一次磁盘写入

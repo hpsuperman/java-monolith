@@ -7,27 +7,16 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import java.util.Arrays;
 
 public enum EnabledStatus {
-    DISABLED(0, "停用"),
+    DISABLED(0),
 
-    ENABLED(1, "启用");
+    ENABLED(1);
 
     @EnumValue
     @JsonValue
     private final int value;
 
-    private final String label;
-
-    EnabledStatus(int value, String label) {
+    EnabledStatus(int value) {
         this.value = value;
-        this.label = label;
-    }
-
-    public int value() {
-        return value;
-    }
-
-    public String label() {
-        return label;
     }
 
     @JsonCreator

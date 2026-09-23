@@ -22,8 +22,14 @@ spring:
     default-property-inclusion: non_null
   servlet:
     multipart:
-      max-file-size: 20MB
-      max-request-size: 20MB
+      # 与 app.minio.max-file-size 同源，改一处两处都变。它们是同一个上限的两道闸门：
+      # Servlet 容器在解析 multipart 时就拦（超了由 GlobalExceptionHandler 返回 413），
+      # FileServiceImpl 再按 app.minio.max-file-size 校验一次。
+      # 别把它们改成不同的值——容器那道总是先触发，业务校验就永远不执行了。
+      max-file-size: ${app.minio.max-file-size}
+      # 整个请求体的上限。multipart 编码后比文件本身多几百字节，所以与文件上限取
+      # 同一个值时，正好顶到上限的文件会在容器层被拒——代价是多一个 413，不影响正确性。
+      max-request-size: ${app.minio.max-file-size}
 
   # ==================== 数据库版本管理 ====================
   # 表结构由 db/migration 下的脚本定义，应用启动时自动执行。
@@ -107,6 +113,19 @@ app:
   mq:
     # 本地没起 RocketMQ 时改成 false，消费者会整体不注册
     enabled: true
+  minio:
+    # 本地 MinIO 由 docker-compose 的 minio 服务提供，桶也由它建好并设为公开读
+    endpoint: ${MINIO_ENDPOINT:http://127.0.0.1:9000}
+    access-key: ${MINIO_ACCESS_KEY:minioadmin}
+    secret-key: ${MINIO_SECRET_KEY:minioadmin}
+    bucket: ${MINIO_BUCKET:monolith}
+    # ⚠️ 拼进返回给前端的 url 的地址，与应用连 MinIO 用的 endpoint 是两回事。
+    #    应用和 MinIO 都在本机时留空即可（回退用 endpoint）。
+    #    应用跑在容器里时 endpoint 得写 http://minio:9000，但那个主机名浏览器解析不了，
+    #    此时必须把这里填成浏览器能访问的地址（如 http://localhost:9000）。
+    public-url: ${MINIO_PUBLIC_URL:}
+    max-file-size: 20MB
+    allowed-extensions: jpg,jpeg,png,gif,webp,bmp
   init-admin:
     # 首次启动自动创建 admin 账号（仅当该账号不存在时）
     enabled: true

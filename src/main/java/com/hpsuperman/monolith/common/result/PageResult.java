@@ -32,18 +32,10 @@ public class PageResult<T> implements Serializable {
         this.records = records;
     }
 
-    public static <T> PageResult<T> of(IPage<T> page) {
-        return new PageResult<>(page.getCurrent(), page.getSize(), page.getTotal(), page.getPages(), page.getRecords());
-    }
-
     public static <E, T> PageResult<T> of(IPage<E> page, Function<E, T> mapper) {
         List<T> list = page.getRecords() == null
                 ? Collections.emptyList()
                 : page.getRecords().stream().map(mapper).toList();
         return new PageResult<>(page.getCurrent(), page.getSize(), page.getTotal(), page.getPages(), list);
-    }
-
-    public static <T> PageResult<T> empty(long pageNum, long pageSize) {
-        return new PageResult<>(pageNum, pageSize, 0L, 0L, Collections.emptyList());
     }
 }
