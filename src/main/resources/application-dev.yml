@@ -31,7 +31,7 @@ spring:
           max-wait: 3000ms
 
 # ==================== RocketMQ ====================
-# 本地没起 broker 时，把整块注释掉，并把 app.mq.enabled 设为 false
+# 本地没起 broker 时，把整块注释掉
 rocketmq:
   name-server: ${ROCKETMQ_NAME_SERVER:127.0.0.1:9876}
   producer:

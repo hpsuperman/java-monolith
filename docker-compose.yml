@@ -56,6 +56,20 @@ services:
     networks:
       - monolith
 
+  # 一次性任务：把数据卷的属主改成 rocketmq（uid 3000）。
+  # 镜像里没有 /home/rocketmq/store 这个目录，Docker 建挂载点时会建成 root:root，
+  # 而 broker 是以 uid 3000 启动的，写不进去就直接退出（exit 255），日志也留不下来。
+  rocketmq-init:
+    image: alpine:3.20
+    container_name: monolith-rocketmq-init
+    command: >
+      sh -c "chown -R 3000:3000 /home/rocketmq/store /home/rocketmq/logs"
+    volumes:
+      - monolith-rocketmq-broker-store:/home/rocketmq/store
+      - monolith-rocketmq-broker-logs:/home/rocketmq/logs
+    networks:
+      - monolith
+
   rocketmq-namesrv:
     image: apache/rocketmq:5.3.1
     container_name: monolith-rocketmq-namesrv
@@ -75,7 +89,10 @@ services:
     container_name: monolith-rocketmq-broker
     restart: unless-stopped
     depends_on:
-      - rocketmq-namesrv
+      rocketmq-namesrv:
+        condition: service_started
+      rocketmq-init:
+        condition: service_completed_successfully
     # -c 指定配置文件，里面的 brokerIP1 是关键，见 docker/rocketmq/broker.conf
     command: sh mqbroker -n rocketmq-namesrv:9876 -c /home/rocketmq/conf/broker.conf
     environment:
@@ -93,9 +110,11 @@ services:
       - monolith
 
   minio:
-    # ⚠️ 用的是 latest，本机没有 docker 没法验证具体 tag 是否存在。
-    #    建议查一次可用 tag 后改成固定版本，与上面 mysql:8.0 / redis:7-alpine 保持一致。
-    image: minio/minio:latest
+    # ⚠️ MinIO 2025-10 起停发 Docker Hub 镜像，minio/minio 已拉不到，只能用 quay.io。
+    #    这里钉的是 quay 上最新的一个 tag（2025-09-07 底座 + 2026-04 hotfix）。
+    #    它带不带 CVE-2025-62506 的修复没验证过，官方修复版 RELEASE.2025-10-15 根本没发镜像。
+    #    本地开发无所谓，拿这个文件当模板发出去之前自己掂量。
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z.hotfix.7aa24e772
     container_name: monolith-minio
     restart: unless-stopped
     # 9000 是 S3 API（应用和浏览器都走它），9001 是 Web 控制台
@@ -120,7 +139,7 @@ services:
   # 一次性任务：建桶 + 设为公开读，跑完就退出。
   # 不在应用启动时建桶——那会让应用像依赖 MySQL 一样依赖 MinIO 可用。
   minio-init:
-    image: minio/mc:latest
+    image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
     container_name: monolith-minio-init
     depends_on:
       minio:

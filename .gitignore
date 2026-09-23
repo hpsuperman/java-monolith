@@ -31,6 +31,6 @@ src/main/resources/application-local.yml
 
 ### IDEA 运行配置 ###
 # .run/ 是 IDEA 的「共享运行配置」目录，本意就是提交进仓库给团队共用。
-# 但本项目的 MonolithApplication.run.xml 里带着本机 MySQL / Redis 明文密码，
-# 因此整个目录忽略掉。将来真要共用时，把值改成占位符再由各人自行注入。
+# 但 IDEA 一保存运行配置就会把本机连接信息（含密码）一起写进去，所以整个目录忽略掉。
+# 将来真要共用时，先把值改成 ${MYSQL_PASSWORD} 这类占位符，再放开这条规则。
 .run/

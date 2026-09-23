@@ -22,9 +22,9 @@ spring:
     default-property-inclusion: non_null
   servlet:
     multipart:
-      # 与 app.minio.max-file-size 同源，改一处两处都变。它们是同一个上限的两道闸门：
+      # 与 app.minio.max-file-size 同源，改一处两处都变。上限只有这一个来源：
       # Servlet 容器在解析 multipart 时就拦（超了由 GlobalExceptionHandler 返回 413），
-      # FileServiceImpl 再按 app.minio.max-file-size 校验一次。
+      # 业务侧再按 app.minio.max-file-size 校验一次。
       # 别把它们改成不同的值——容器那道总是先触发，业务校验就永远不执行了。
       max-file-size: ${app.minio.max-file-size}
       # 整个请求体的上限。multipart 编码后比文件本身多几百字节，所以与文件上限取
@@ -44,10 +44,10 @@ spring:
     #    的最后一道防线。打开它之后，连错库会静默打上基线然后开始跑迁移。
     #    所以改 url 里的库名时，务必人工确认一次。
     baseline-on-migrate: true
-    # 与 V1__init_user.sql 对齐。存量库的现状恰好等于「V1 已执行」，所以基线打到 1，
-    # 只跑 V2 及以后——V1 带 CREATE TABLE，在存量库上重跑必失败。
-    # 默认值本来就是 1，这里显式写出来，是因为「V1 不执行」是整个方案的关键，
-    # 藏在默认值里读配置的人看不见。注意别写成 1.0：那是另一个版本号。
+    # 基线版本。Flyway 默认就是 1，这里显式写出来，别写成 1.0——那是另一个版本号。
+    # ⚠️ 后果：某个库第一次被连上时若已经有表、又没有 flyway_schema_history，会被打上
+    #    「V1 已执行」的基线，此后 V1__xxx.sql 在那个库上整份跳过——表建不出来，且不报错。
+    #    本地要重来就 DROP DATABASE 重建，别手工删单表。
     baseline-version: 1
     # 生产红线：flyway clean 会 DROP 掉整个 schema。
     # 11.x 的默认值已经是 true，这里显式写出来，免得哪天有人靠改配置把它打开。
@@ -110,9 +110,6 @@ app:
     allowed-origins: "*"
     allowed-methods: "*"
     allow-credentials: false
-  mq:
-    # 本地没起 RocketMQ 时改成 false，消费者会整体不注册
-    enabled: true
   minio:
     # 本地 MinIO 由 docker-compose 的 minio 服务提供，桶也由它建好并设为公开读
     endpoint: ${MINIO_ENDPOINT:http://127.0.0.1:9000}
@@ -126,9 +123,6 @@ app:
     public-url: ${MINIO_PUBLIC_URL:}
     max-file-size: 20MB
     allowed-extensions: jpg,jpeg,png,gif,webp,bmp
-  init-admin:
-    # 首次启动自动创建 admin 账号（仅当该账号不存在时）
-    enabled: true
 
 logging:
   level:
