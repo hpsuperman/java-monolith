@@ -16,6 +16,7 @@ import com.hpsuperman.monolith.modules.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +26,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     private final TokenStore tokenStore;
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public TokenVO register(RegisterRequest request) {
         if (lambdaQuery().eq(User::getPhone, request.getPhone()).exists()) {
             throw new BizException(ResultCode.DATA_CONFLICT, "该手机号已注册");
@@ -35,6 +37,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         user.setEmail(request.getEmail());
         user.setNickname(request.getNickname());
         user.setRoles(Role.USER.name());
+        user.setStatus(EnabledStatus.ENABLED);
 
         save(user);
         return issueToken(user);
@@ -43,10 +46,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     public TokenVO login(LoginRequest request) {
         User user = lambdaQuery().eq(User::getPhone, request.getPhone()).one();
-        if (user == null || !user.getPassword().equals(passwordEncoder.encode(request.getPassword()))) {
+        if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new BizException("手机号或密码错误");
         }
-        if (!user.getStatus().equals(EnabledStatus.ENABLED)) {
+        if (!EnabledStatus.ENABLED.equals(user.getStatus())) {
             throw new BizException("账号已被禁用");
         }
         return issueToken(user);
