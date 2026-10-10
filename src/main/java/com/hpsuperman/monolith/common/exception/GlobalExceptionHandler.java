@@ -24,6 +24,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.LinkedHashMap;
@@ -70,6 +72,14 @@ public class GlobalExceptionHandler {
             MissingServletRequestParameterException e, HttpServletRequest request) {
         String message = "缺少必填参数：" + e.getParameterName();
         log.warn("缺少参数 | {} {} | {}", request.getMethod(), request.getRequestURI(), message);
+        return ResponseEntity.badRequest().body(Result.fail(ResultCode.BAD_REQUEST, message));
+    }
+
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<Result<Void>> handleMissingPart(
+            MissingServletRequestPartException e, HttpServletRequest request) {
+        String message = "缺少必填部件：" + e.getRequestPartName();
+        log.warn("缺少部件 | {} {} | {}", request.getMethod(), request.getRequestURI(), message);
         return ResponseEntity.badRequest().body(Result.fail(ResultCode.BAD_REQUEST, message));
     }
 
@@ -139,6 +149,15 @@ public class GlobalExceptionHandler {
         log.warn("上传文件超出容器上限 | {} {}", request.getMethod(), request.getRequestURI());
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
                 .body(Result.fail(ResultCode.PAYLOAD_TOO_LARGE));
+    }
+
+    @ExceptionHandler(MultipartException.class)
+    public ResponseEntity<Result<Void>> handleMultipart(
+            MultipartException e, HttpServletRequest request) {
+        log.warn("非法的 multipart 请求 | {} {} | {}",
+                 request.getMethod(), request.getRequestURI(), e.getMessage());
+        return ResponseEntity.badRequest()
+                .body(Result.fail(ResultCode.BAD_REQUEST, "请求不是合法的 multipart 表单"));
     }
 
     @ExceptionHandler(DuplicateKeyException.class)
