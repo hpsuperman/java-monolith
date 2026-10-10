@@ -18,7 +18,6 @@ import java.util.UUID;
 public class JwtTokenProvider {
     public static final String CLAIM_TYPE = "type";
     public static final String CLAIM_USERNAME = "username";
-    public static final String CLAIM_NICKNAME = "nickname";
     public static final String CLAIM_ROLES = "roles";
 
     public static final String TYPE_ACCESS = "access";
@@ -56,17 +55,17 @@ public class JwtTokenProvider {
     public record IssuedTokens(String accessToken, String refreshToken, String refreshJti) {
     }
 
-    public IssuedTokens issue(Long userId, String username, String nickname, List<String> roles) {
+    public IssuedTokens issue(Long userId, String username, List<String> roles) {
         String refreshJti = UUID.randomUUID().toString();
         return new IssuedTokens(
-                build(userId, username, nickname, roles, TYPE_ACCESS,
+                build(userId, username, roles, TYPE_ACCESS,
                         properties.getAccessTokenTtl(), UUID.randomUUID().toString()),
-                build(userId, username, null, null, TYPE_REFRESH,
+                build(userId, username, null, TYPE_REFRESH,
                         properties.getRefreshTokenTtl(), refreshJti),
                 refreshJti);
     }
 
-    private String build(Long userId, String username, String nickname,
+    private String build(Long userId, String username,
                          List<String> roles, String type, Duration ttl, String jti) {
         Instant now = Instant.now();
         var builder = Jwts.builder()
@@ -79,9 +78,6 @@ public class JwtTokenProvider {
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plus(ttl)));
 
-        if (nickname != null) {
-            builder.claim(CLAIM_NICKNAME, nickname);
-        }
         if (roles != null && !roles.isEmpty()) {
             builder.claim(CLAIM_ROLES, roles);
         }

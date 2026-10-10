@@ -5,6 +5,7 @@ CREATE TABLE sys_user
     password    VARCHAR(100) NOT NULL COMMENT 'BCrypt 加密后的密码',
     nickname    VARCHAR(100) NULL COMMENT '昵称',
     email       VARCHAR(100) NULL COMMENT '邮箱',
+    avatar      TEXT NULL COMMENT '头像',
     roles       VARCHAR(100) NOT NULL DEFAULT 'USER' COMMENT '角色，逗号分隔',
     status      TINYINT      NOT NULL DEFAULT 1 COMMENT '0 禁用 1 启用',
     deleted     INT          NOT NULL DEFAULT 1 COMMENT '0 删除 1 正常',

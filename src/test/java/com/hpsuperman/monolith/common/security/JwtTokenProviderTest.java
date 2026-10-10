@@ -66,13 +66,15 @@ class JwtTokenProviderTest {
     void issuesTokensWithCorrectClaims() {
         JwtTokenProvider provider = new JwtTokenProvider(properties());
 
-        JwtTokenProvider.IssuedTokens tokens = provider.issue(7L, "zhangsan", "张三", List.of("ADMIN", "USER"));
+        JwtTokenProvider.IssuedTokens tokens = provider.issue(7L, "zhangsan", List.of("ADMIN", "USER"));
 
         var accessClaims = provider.parse(tokens.accessToken()).getPayload();
         assertThat(accessClaims.get(JwtTokenProvider.CLAIM_TYPE, String.class))
                 .isEqualTo(JwtTokenProvider.TYPE_ACCESS);
         assertThat(provider.getUserId(accessClaims)).isEqualTo(7L);
         assertThat(rolesOf(accessClaims)).containsExactly("ADMIN", "USER");
+
+        assertThat(accessClaims.get("nickname")).isNull();
 
         var refreshClaims = provider.parse(tokens.refreshToken()).getPayload();
         assertThat(refreshClaims.get(JwtTokenProvider.CLAIM_TYPE, String.class))
@@ -87,7 +89,7 @@ class JwtTokenProviderTest {
     void rejectsTokenSignedByAnotherKey() {
         JwtProperties other = properties();
         other.setSecret(OTHER_SECRET);
-        String foreign = new JwtTokenProvider(other).issue(7L, "zhangsan", null, List.of()).accessToken();
+        String foreign = new JwtTokenProvider(other).issue(7L, "zhangsan", List.of()).accessToken();
 
         JwtTokenProvider provider = new JwtTokenProvider(properties());
         assertThatThrownBy(() -> provider.parse(foreign)).isInstanceOf(JwtException.class);
@@ -100,7 +102,7 @@ class JwtTokenProviderTest {
         properties.setRefreshTokenTtl(Duration.ofMillis(1));
 
         JwtTokenProvider provider = new JwtTokenProvider(properties);
-        String token = provider.issue(7L, "zhangsan", null, List.of()).refreshToken();
+        String token = provider.issue(7L, "zhangsan", List.of()).refreshToken();
 
         assertThatThrownBy(() -> provider.parse(token)).isInstanceOf(ExpiredJwtException.class);
     }

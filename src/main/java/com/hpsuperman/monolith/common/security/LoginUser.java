@@ -23,18 +23,16 @@ public class LoginUser implements UserDetails, Serializable {
     private final String username;
 
     private final String password;
-    private final String nickname;
     private final EnabledStatus status;
     private final Set<String> roles;
 
     private final List<GrantedAuthority> authorities;
 
     public LoginUser(Long userId, String username, String password,
-                     String nickname, EnabledStatus status, Collection<String> roles) {
+                     EnabledStatus status, Collection<String> roles) {
         this.userId = userId;
         this.username = username;
         this.password = password;
-        this.nickname = nickname;
         this.status = status;
         this.roles = roles == null ? Set.of() : new LinkedHashSet<>(roles);
         this.authorities = this.roles.stream()
@@ -46,7 +44,6 @@ public class LoginUser implements UserDetails, Serializable {
 
     public static LoginUser fromClaims(Claims claims) {
         String username = claims.get(JwtTokenProvider.CLAIM_USERNAME, String.class);
-        String nickname = claims.get(JwtTokenProvider.CLAIM_NICKNAME, String.class);
 
         List<?> rawRoles = claims.get(JwtTokenProvider.CLAIM_ROLES, List.class);
         Set<String> roles = new LinkedHashSet<>();
@@ -54,7 +51,7 @@ public class LoginUser implements UserDetails, Serializable {
             rawRoles.forEach(r -> roles.add(String.valueOf(r)));
         }
 
-        return new LoginUser(Long.valueOf(claims.getSubject()), username, null, nickname,
+        return new LoginUser(Long.valueOf(claims.getSubject()), username, null,
                 EnabledStatus.ENABLED, roles);
     }
 
