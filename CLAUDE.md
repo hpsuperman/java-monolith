@@ -4,8 +4,9 @@ Spring Boot 3 单体服务脚手架。**没有 README，这份是唯一文档。
 （`github.com/hpsuperman/java-monolith`），提交前必查有没有真实凭据。
 
 **定位**：电商作品集，做小做深，每阶段能单独演示。阶段 0 用户 + 文件上传（已实测）；
-阶段 1 商品（已写完未实测）；后续 ②购物车+下单 ③订单状态机 ④幂等/秒杀/缓存。阶段 1 不做 SKU。
-**下一步**：前台商品接口 `GET /products` 列表 + 详情，匿名可读，要进白名单。
+阶段 1 商品（已写完未实测）；阶段 2 购物车（已写完未实测），下单待写。
+后续 ③订单状态机 ④幂等/秒杀/缓存。阶段 1 不做 SKU。
+**下一步**：下单——一个事务里取商品快照、扣库存、落单、清购物车。
 
 JDK 17 · Boot 3.5.16 · MyBatis-Plus 3.5.17 · MySQL 8 · Redis 7 · RocketMQ 5 · MinIO 8.5.17 ·
 Flyway · springdoc 2.9.1 · jjwt 0.13.0。版本坑写在 pom.xml 注释里。
@@ -35,9 +36,10 @@ mvn spotless:apply       # 删无用 import、去行尾空白、CRLF→LF
 ```
 common/          基础设施，与业务无关。**不依赖 modules**
 modules/user/    注册 登录 刷新 登出 改资料（/auth）；用户管理（/admin/users）
-modules/product/ 商品（/admin/products）；前台 /products 待写
+modules/product/ 商品（/admin/products）；前台 /products
+modules/cart/    购物车（/cart），五个接口全要登录
 modules/file/    文件上传（/files）。**没有表，不落库**
-resources/       application{,-dev,-prod}.yml · logback · db/migration/V{1,2}__*.sql
+resources/       application{,-dev,-prod}.yml · logback · db/migration/V{1..3}__*.sql
 test/            4 个类 / 32 用例，纯 Mockito，不起 Spring
 ```
 
@@ -106,6 +108,27 @@ test/            4 个类 / 32 用例，纯 Mockito，不起 Spring
 
 **product** `/admin/products` 增删改查，ADMIN 专用。表 `sys_product`，软删。没有自操作守卫。
 
+前台 `GET /products` 与 `GET /products/{id}`，匿名可读，两条都进白名单。**故意不写
+`@PreAuthorize`**——方法级校验在过滤器之后跑，补一条 `isAuthenticated()` 会把匿名又挡回去。
+
+- ⚠️ 列表无条件 `.eq(status, ENABLED)`，详情查不到或非上架都报「查询不到商品」。`ProductVO`
+  里没有 `status` 字段，漏了这道过滤前端看不出来
+- 白名单要写 `/products` + `/products/*`，不是 `/products/**`——只放开只读两条，将来更深的
+  写接口默认落回「登录才能调」
+
+**cart** `/cart` 五个接口（列表 / 加购 / 改数量 / 删一条 / 清空），类级
+`@PreAuthorize("isAuthenticated()")`，**不在白名单**。表 `sys_cart`，物理删，没有 `@TableLogic`。
+
+- 唯一键 `(user_id, product_id)`：同一个人同一件商品永远一行，加购是 `quantity += n` 的 UPDATE
+- ⚠️ 每个方法第一个参数都是 `userId`（Controller 用 `SecurityUtils.getUserId()` 取），
+  **它必须进 WHERE**。写成只按 `product_id` 删，删的是所有人的购物车
+- 不存 price：列表的价现查 `sys_product`。**快照只在下单那一刻做**，购物车不做
+- 加购和改数量都不校验库存，库存只在下单时校验
+- 列表不分页（一个用户几十条），不用 `PageQuery` / `PageResult`
+- 商品「没了」有两条路：软删的 `selectByIds` 查不到 → `list` 里跳过；下架的查得到 → 靠
+  `CartVO.status` 让前端显示「已失效」
+- 读用 `lambdaQuery()`，改 / 删用 `lambdaUpdate()`——`set` / `update` / `remove` 只在后者身上
+
 **file** `POST /files`，`isAuthenticated()`，不在白名单。中转上传、bucket 公开读。校验顺序：
 扩展名白名单 → 大小 → 文件头魔数。`filename` / `Content-Type` 一律不采信，扩展名绝不进存储路径。
 
@@ -134,6 +157,7 @@ test/            4 个类 / 32 用例，纯 Mockito，不起 Spring
 4. **登出只能全端登出**（`revokeUserTokens` 按 userId 整体撤销）；`blacklist(jti)` 没有调用方
 5. `auth:refresh:{userId}` 只有一个 key → 隐式单端登录，设备 B 一登录 A 的 refresh 就刷不动
 6. `uk_phone` 不含 `deleted`，软删掉的手机号永久占位，不能重新注册
+7. 加购是「先查后插」，同一用户并发加同一件商品会撞 `uk_user_product` 抛 `DuplicateKeyException`
 
 ## 上线前
 
