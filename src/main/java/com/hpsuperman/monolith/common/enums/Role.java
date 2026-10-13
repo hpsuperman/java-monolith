@@ -14,4 +14,11 @@ public enum Role {
         }
         return Arrays.stream(roles.split(",")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toList());
     }
+
+    public static String join(List<Role> roles) {
+        if (roles == null || roles.isEmpty()) {
+            return null;
+        }
+        return roles.stream().distinct().map(Enum::name).collect(Collectors.joining(","));
+    }
 }

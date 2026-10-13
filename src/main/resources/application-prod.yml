@@ -60,3 +60,9 @@ logging:
   level:
     root: warn
     com.hpsuperman.monolith: info
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

@@ -15,7 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 @Tag(name = "文件")
 @RestController
-@RequestMapping("/api/files")
+@RequestMapping("/files")
 @RequiredArgsConstructor
 public class FileController {
     private final FileService fileService;

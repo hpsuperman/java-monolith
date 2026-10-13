@@ -14,6 +14,7 @@ import com.hpsuperman.monolith.modules.user.service.UserService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.BeanUtils;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -108,14 +109,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
         User user = new User();
         user.setId(userId);
-        user.setNickname(request.getNickname());
-        user.setEmail(request.getEmail());
-        user.setAvatar(request.getAvatar());
+        BeanUtils.copyProperties(request, user);
         if (!updateById(user)) {
             throw new BizException("用户不存在");
         }
     }
-
     @Override
     public UserVO getProfile(Long userId) {
         return UserConverter.toVO(requireEnabledUser(userId));
@@ -128,7 +126,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         }
         return user;
     }
-
     private TokenVO issueToken(User user) {
         JwtTokenProvider.IssuedTokens tokens = jwtTokenProvider.issue(user.getId(), user.getPhone(), Role.split(user.getRoles()));
 

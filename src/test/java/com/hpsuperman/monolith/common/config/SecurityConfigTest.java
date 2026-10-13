@@ -95,6 +95,6 @@ class SecurityConfigTest {
 
     private CorsConfiguration resolve() {
         CorsConfigurationSource source = securityConfig.corsConfigurationSource();
-        return source.getCorsConfiguration(new MockHttpServletRequest("GET", "/api/users"));
+        return source.getCorsConfiguration(new MockHttpServletRequest("GET", "/admin/users"));
     }
 }

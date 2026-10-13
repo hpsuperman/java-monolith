@@ -8,7 +8,7 @@ CREATE TABLE sys_user
     avatar      TEXT NULL COMMENT '头像',
     roles       VARCHAR(100) NOT NULL DEFAULT 'USER' COMMENT '角色，逗号分隔',
     status      TINYINT      NOT NULL DEFAULT 1 COMMENT '0 禁用 1 启用',
-    deleted     INT          NOT NULL DEFAULT 1 COMMENT '0 删除 1 正常',
+    deleted     TINYINT          NOT NULL DEFAULT 1 COMMENT '0 删除 1 正常',
     create_time DATETIME     NOT NULL COMMENT '创建时间',
     update_time DATETIME     NOT NULL COMMENT '更新时间',
     PRIMARY KEY (id),

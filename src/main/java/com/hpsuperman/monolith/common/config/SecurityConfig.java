@@ -29,10 +29,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig {
     private static final String[] PUBLIC_PATHS = {
-        "/api/auth/login",       // 登录 —— 还没登录的人当然要能调
-        "/api/auth/register",    // 注册 —— 同上，没账号才来注册
-        "/api/auth/refresh",
-        "/api/auth/logout",
+        "/auth/login",           // 登录 —— 还没登录的人当然要能调
+        "/auth/register",        // 注册 —— 同上，没账号才来注册
+        "/auth/refresh",
+        "/auth/logout",
+        "/products",             // 商品列表 —— 游客要能浏览
+        "/products/*",           // 商品详情 —— 一条只匹配一层
         "/actuator/health/**",   // 健康检查，监控系统要能探
         "/actuator/info",
         "/error",

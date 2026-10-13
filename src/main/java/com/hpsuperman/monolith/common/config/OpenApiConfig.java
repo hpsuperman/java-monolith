@@ -21,7 +21,7 @@ public class OpenApiConfig {
                         .description("""
                                 单体服务脚手架接口文档。
 
-                                调用受保护接口前，先调 `POST /api/auth/login` 拿到 accessToken，
+                                调用受保护接口前，先调 `POST /auth/login` 拿到 accessToken，
                                 再点右上角 Authorize 把 token 粘进去（只填 token 本身，不要加 Bearer 前缀）。
                                 """)
                         .version("1.0.0")
